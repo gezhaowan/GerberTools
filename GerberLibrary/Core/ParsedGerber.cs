@@ -17,7 +17,7 @@ using TriangleNet.Meshing;
 
 namespace GerberLibrary.Core
 {
-    public class ParsedGerber
+    public class ParsedGerber:IDisposable
     {
         public override string ToString()
         {
@@ -126,6 +126,10 @@ namespace GerberLibrary.Core
         public BoardSide Side;
         public BoardLayer Layer;
         public string Name;
+        /// <summary>
+        /// 是否为需电镀钻孔的外圈
+        /// </summary>
+        public bool IsDrillHoleOuterRing = false;
 
         //
         public List<string> OriginalLines = new List<string>();
@@ -314,5 +318,15 @@ namespace GerberLibrary.Core
                 }
             }
         }
-    }
+
+        public void Dispose()
+        {
+            Shapes.Clear();
+            DisplayShapes.Clear();
+            OutlineShapes.Clear();
+            ZerosizePoints.Clear();
+            BoundingBox = null;
+            OriginalLines.Clear();
+        }
+}
 }

@@ -170,10 +170,12 @@ namespace GerberLibrary.Core
 
         public void DrawRectangle(Color color, float x, float y, float w, float h)
         {
-            DrawLine(new Pen(color), x, y, x+w, y);
-            DrawLine(new Pen(color), x+w, y, x+w, y+h);
-            DrawLine(new Pen(color), x+w, y+h, x, y+h);
-            DrawLine(new Pen(color), x, y+h, x, y);
+            Pen p = new Pen(color);
+            DrawLine(p, x, y, x+w, y);
+            DrawLine(p, x+w, y, x+w, y+h);
+            DrawLine(p, x+w, y+h, x, y+h);
+            DrawLine(p, x, y+h, x, y);
+            p.Dispose();
         }
 
         public void DrawString(PointD pos, string text, double scale, bool center, float r = 0.2f, float g = 0.2f, float b = 0.2f, float a = 1.0f)
@@ -181,7 +183,9 @@ namespace GerberLibrary.Core
             StringFormat SF = new StringFormat();
             if (center) SF.Alignment = StringAlignment.Center;
             SF.LineAlignment = StringAlignment.Far;
-            G.DrawString(text, new Font("Arial", (float)scale * 13.0f), new SolidBrush(Color.FromArgb((byte)(a * 255.0), (byte)(r * 255.0), (byte)(g * 255.0), (byte)(b * 255.0))), new PointF((float)pos.X, (float)pos.Y), SF);
+            SolidBrush brush = new SolidBrush(Color.FromArgb((byte)(a * 255.0), (byte)(r * 255.0), (byte)(g * 255.0), (byte)(b * 255.0)));
+            G.DrawString(text, new Font("Arial", (float)scale * 13.0f), brush, new PointF((float)pos.X, (float)pos.Y), SF);
+            brush.Dispose();
         }
 
         public PointD MeasureString(string p)
@@ -197,12 +201,16 @@ namespace GerberLibrary.Core
 
         public void FillRectangle(Color color, float x, float y, float w, float h)
         {
-            G.FillRectangle(new SolidBrush(color), x, y, w, h);
+            SolidBrush brush = new SolidBrush(color);
+            G.FillRectangle(brush, x, y, w, h);
+            brush.Dispose();
         }
 
         public void FillPath(Color c, GraphicsPath gP)
         {
-            G.FillPath(new SolidBrush(c), gP);           
+            SolidBrush brush = new SolidBrush(c);
+            G.FillPath(brush, gP);           
+            brush.Dispose();
         }
 
         public void DrawLine(Pen P, PointF p1, PointF p2)
@@ -212,10 +220,12 @@ namespace GerberLibrary.Core
 
         public void DrawRectangle(Color color, float x, float y, float w, float h, float strokewidth = 1)
         {
-            DrawLine(new Pen(color, strokewidth), x, y, x + w, y);
-            DrawLine(new Pen(color, strokewidth), x+w, y, x + w, y+h);
-            DrawLine(new Pen(color, strokewidth), x+w, y+h, x , y+h);
-            DrawLine(new Pen(color, strokewidth), x, y+h, x , y );
+            Pen p = new Pen(color, strokewidth);
+            DrawLine(p, x, y, x + w, y);
+            DrawLine(p, x+w, y, x + w, y+h);
+            DrawLine(p, x+w, y+h, x , y+h);
+            DrawLine(p, x, y+h, x , y );
+            p.Dispose();
         }
 
         public void DrawString(string text, Font font, SolidBrush solidBrush, float x, float y, StringFormat sF)
@@ -225,8 +235,9 @@ namespace GerberLibrary.Core
 
         public void DrawPath(Color black, GraphicsPath pATH, float v)
         {
-            G.DrawPath(new Pen(black, v), pATH);
-            
+            Pen p = new Pen(black, v);
+            G.DrawPath(p, pATH);
+            p.Dispose();
         }
 
         public void FillPolygon(SolidBrush solidBrush, PointF[] pointF)

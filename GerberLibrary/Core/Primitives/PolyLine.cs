@@ -11,7 +11,7 @@ using Polygons = System.Collections.Generic.List<System.Collections.Generic.List
 
 namespace GerberLibrary.Core.Primitives
 {
-    public class PolyLine
+    public class PolyLine:IDisposable
     {
         public enum PolyIDs{
             Outline = -20,
@@ -645,6 +645,10 @@ namespace GerberLibrary.Core.Primitives
 
         }
 
+        public void Dispose()
+        {
+            Vertices.Clear();
+        }
     }
 
 }

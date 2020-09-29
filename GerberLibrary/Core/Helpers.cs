@@ -19,7 +19,9 @@ namespace GerberLibrary.Core
 
         public void Draw(Graphics g, Color C, float W = 1.0f)
         {
-            g.DrawLine(new Pen(C, W), x1, y1, x2, y2);
+            Pen p = new Pen(C, W);
+            g.DrawLine(p, x1, y1, x2, y2);
+            p.Dispose();
         }
 
         public static float SumLengths(List<Line> outline)
@@ -369,6 +371,7 @@ namespace GerberLibrary.Core
                                 {
                                     GGI.DrawLine(new Pen(Color.DarkGreen, 1.0f), (DebugN[i] * Scaler).ToF(), (DebugN[i + 1] * Scaler).ToF());
                                 }
+                                G.Dispose();
                                 OutB.Save("testout.png");
                             }
 

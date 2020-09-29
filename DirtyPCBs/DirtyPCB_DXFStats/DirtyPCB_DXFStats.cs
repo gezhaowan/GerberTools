@@ -40,6 +40,7 @@ namespace DirtyPCB_DXFStats
                 {
                     G.DrawLine(Pens.Black, S.Item1, S.Item2);
                 }
+                G.Dispose();
                 B.Save("debugout.png");
 #endif
             }

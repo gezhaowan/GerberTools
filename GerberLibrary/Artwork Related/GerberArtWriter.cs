@@ -375,6 +375,7 @@ namespace GerberLibrary
                 Bitmap B3 = new Bitmap(iW, iH);
                 Graphics G2 = Graphics.FromImage(B3);
                 G2.Clear(Color.Black);
+
                 double[] DistanceField = new double[iW * iH];
                 double[] DistanceFieldBlur = new double[iW * iH];
                 double[] AngleField = new double[iW * iH];
@@ -434,6 +435,8 @@ namespace GerberLibrary
                     }
 
                 }
+                G.Dispose();
+                G2.Dispose();
                 B.Save(target + "_renderbase.png");
 
 
@@ -935,7 +938,8 @@ namespace GerberLibrary
                     }
                     B.Save(target + "_renderDistance.png");
                 }
-
+                G.Dispose();
+                G2.Dispose();
                 log.AddString(String.Format("Calculating Flower Field and Artwork"));
                 GerberArtWriter GOW = new GerberArtWriter();
                 {
@@ -978,7 +982,7 @@ namespace GerberLibrary
                     {
                         a.Draw(GG);
                     }
-
+                    GG.Dispose();
                     B2.Save(target + "_FlowerPrint.png");
                 }
 
@@ -1072,6 +1076,7 @@ namespace GerberLibrary
                         Pen Pp = new Pen(new SolidBrush(C), (float)Width);
                         Pp.SetLineCap(LineCap.Round, LineCap.Round, DashCap.Round);
                         G.DrawLine(Pp, (float)Start.X, (float)Start.Y, (float)End.X, (float)End.Y);
+                        Pp.Dispose();
                     }
                 }
 
@@ -1536,7 +1541,8 @@ namespace GerberLibrary
                     B.Save(target + "_renderAngle.png");
                     B2.Save(target + "_artwork.png");
                 }
-
+                G.Dispose();
+                G2.Dispose();
                 log.AddString(String.Format("Converting to gerber.."));
                 WriteBitmapToGerber(target, Outline, Res, B2);
                 log.AddString(String.Format("Done"));
@@ -1727,7 +1733,6 @@ namespace GerberLibrary
                 int iH = (int)(H * Res) + 2;
                 int Range = Math.Max(iW, iH);
                 Bitmap B = new Bitmap(iW, iH);
-                Bitmap B2 = new Bitmap(iW, iH);
                 Bitmap B3 = new Bitmap(iW, iH);
                 Graphics G2 = Graphics.FromImage(B3);
                 G2.Clear(Color.Black);
@@ -1911,7 +1916,8 @@ namespace GerberLibrary
 
                 }
 
-
+                G.Dispose();
+                G2.Dispose();
 
                 GOW.Write(target);
                 log.AddString(String.Format("Done"));

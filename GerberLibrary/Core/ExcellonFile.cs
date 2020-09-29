@@ -24,20 +24,20 @@ namespace GerberLibrary
 
     public class ExcellonFile
     {
-        public void Load(ProgressLog log, string filename, double drillscaler = 1.0)
+        public void Load(ProgressLog log, string filename, double drillscaler = 1.0, double drillRadiusScaler = 1.0f)
         {
             var lines = File.ReadAllLines(filename);
-            ParseExcellon(lines.ToList(), drillscaler,log);
+            ParseExcellon(lines.ToList(), drillscaler,log, drillRadiusScaler);
         }
 
-        public void Load(ProgressLog log, StreamReader stream, double drillscaler = 1.0)
+        public void Load(ProgressLog log, StreamReader stream, double drillscaler = 1.0, double drillRadiusScaler = 1.0f)
         {
             List<string> lines = new List<string>();
             while (!stream.EndOfStream)
             {
                 lines.Add(stream.ReadLine());
             }
-            ParseExcellon(lines, drillscaler, log);
+            ParseExcellon(lines, drillscaler, log, drillRadiusScaler);
         }
 
         public static void MergeAll(List<string> Files, string output, ProgressLog Log)
@@ -298,8 +298,15 @@ namespace GerberLibrary
             }
             return T;
         }
-
-        bool ParseExcellon(List<string> lines, double drillscaler,ProgressLog log )
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="lines"></param>
+        /// <param name="drillscaler"></param>
+        /// <param name="log"></param>
+        /// <param name="radiusAdjust">半径修正系数,用于实现电镀孔厚度,单位mm</param>
+        /// <returns></returns>
+        bool ParseExcellon(List<string> lines, double drillscaler,ProgressLog log,double radiusScaler = 1.0f )
         {
             log.PushActivity("Parse Excellon");
             Tools.Clear();
@@ -436,7 +443,7 @@ namespace GerberLibrary
 
                                                             ET.ID = (int)GCC.numbercommands[0];
 
-                                                            ET.Radius = GNF.ScaleFileToMM(GCC.GetNumber('C')) / 2.0f;
+                                                            ET.Radius = GNF.ScaleFileToMM(GCC.GetNumber('C')) / 2.0f*radiusScaler;
                                                             Tools[ET.ID] = ET;
                                                         }
                                                         break;

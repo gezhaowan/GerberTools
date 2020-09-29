@@ -61,8 +61,7 @@ namespace GerberLibrary
 
         public override void AddString(string text, float progress = -1)
         {
-            Console.WriteLine(GetDefaultText(text, progress));
-
+            //Console.WriteLine(GetDefaultText(text, progress));
         }
     }
 
@@ -794,6 +793,7 @@ namespace GerberLibrary
                 G2.SmoothingMode = SmoothingMode.HighQuality;
                 G2.Transform = G.Transform;
                 Helpers.DrawMMGrid(new GraphicsGraphicsInterface(G2), PW, (float)TheSet.Width, (float)TheSet.Height, (float)snapdistance, (float)snapdistance * 10.0f);
+                G2.Dispose();
                 Console.WriteLine("building new millimeter grid!");
             }
             G.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.High;

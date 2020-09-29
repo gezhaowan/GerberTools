@@ -92,15 +92,27 @@ namespace GerberToImage
                 }
                 return;
             }
-            
+
+            for (int t = 0; t < 1; t++)
+            {
+                CreateImageForSingleFile11(dpi, RestList);
+            }
+            Console.ReadKey();
+        }
+        private static void CreateImageForSingleFile11(double dpi, List<string> RestList)
+        {
+            string pcbcolor = "green";
+            string silkcolor = "white";
+            string tracecolor = "auto";
+            string coppercolor = "gold";
             GerberImageCreator GIC = new GerberImageCreator();
             string TargetFileBaseName = "";
             if (RestList.Count() >= 1) TargetFileBaseName = RestList[0];
-            
+
             List<String> FileList = new List<string>();
 
-            foreach(var a in RestList)
-            { 
+            foreach (var a in RestList)
+            {
                 if (Directory.Exists(a))
                 {
                     FileList.AddRange(Directory.GetFiles(a, "*.*"));
@@ -108,7 +120,7 @@ namespace GerberToImage
                 else
                 {
                     if (File.Exists(a))
-                     {
+                    {
                         FileList.Add(a);
                     }
                 }
@@ -122,8 +134,7 @@ namespace GerberToImage
                     FileList[i] = Path.GetDirectoryName(FileList[i]);
                 }
             }
-            var L = new GerberToImage( Path.GetFileNameWithoutExtension(TargetFileBaseName));
-            GIC.AddBoardsToSet(FileList,new StandardConsoleLog(),  true);
+            GIC.AddBoardsToSet(FileList, new StandardConsoleLog(), true, 0.8);
             BoardRenderColorSet colors = new BoardRenderColorSet();
 
             if (pcbcolor == "") pcbcolor = "black";
@@ -131,11 +142,13 @@ namespace GerberToImage
 
 
             GIC.SetColors(colors);
-            GIC.WriteImageFiles(TargetFileBaseName, dpi, false, xray, normal, new StandardConsoleLog());
+            //GIC.WriteImageFiles(TargetFileBaseName, 96, false, xray, normal, new StandardConsoleLog());
+            GIC.DrawAllFilesForPrintPcb(TargetFileBaseName, dpi, null);
             Console.WriteLine("Done writing {0}", TargetFileBaseName);
-       //    Console.ReadKey();
-        }
+            GIC.Dispose();
+            GC.Collect();
 
+        }
         private static void CreateImageForSingleFile(ProgressLog log, string arg, Color Foreground, Color Background)
         {
             

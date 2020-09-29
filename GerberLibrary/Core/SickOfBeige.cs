@@ -742,7 +742,7 @@ namespace GerberLibrary.Core
                     Points.Add(Pl.Vertices[0].ToF());
                     G.DrawLines(pen2, Points.ToArray());
                 }
-
+                G.Dispose();
                 var ImagePNG = outputfile + ".png";
                 B.Save(ImagePNG);
                 return ImagePNG;

@@ -61,6 +61,7 @@ namespace GerberLibrary.Core
     {
         Gerber,
         Drill,
+        PlatedDrill,
         Unsupported
     }
 }

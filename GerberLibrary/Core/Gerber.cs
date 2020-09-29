@@ -735,6 +735,52 @@ namespace GerberLibrary
 
         }
 
+        public static BoardFileType FindFileTypeFromStreamEx(StreamReader l, string filename)
+        {
+            filename = filename.ToLower();
+            List<string> unsupported = new List<string>() { "config", "exe", "dll", "png", "zip", "gif", "jpeg", "doc", "docx", "jpg", "bmp" };
+            string[] filesplit = filename.Split('.');
+            string ext = filesplit[filesplit.Count() - 1].ToLower();
+            foreach (var s in unsupported)
+            {
+                if (ext == s)
+                {
+
+                    return BoardFileType.Unsupported;
+                }
+            }
+            try
+            {
+                // var F = File.OpenText(a);
+                List<string> lines = new List<string>();
+                while (!l.EndOfStream)
+                {
+                    lines.Add(l.ReadLine());
+                }
+                //var F = File.ReadAllLines(filename);
+
+
+                for (int i = 0; i < lines.Count(); i++)
+                {
+                    string L = lines[i];
+                    if (L.Contains("%FS")) return BoardFileType.Gerber;
+                    if (L.Contains("M48"))
+                    {
+                        if(Path.GetFileNameWithoutExtension( filename).ToLower().EndsWith("-plated"))
+                            return BoardFileType.PlatedDrill;
+                        return BoardFileType.Drill;
+                    }
+                };
+            }
+            catch (Exception)
+            {
+                return BoardFileType.Unsupported;
+            }
+
+            return BoardFileType.Unsupported;
+
+        }
+
         public static Bounds GetBoundingBox(ProgressLog log, List<string> generatedFiles)
         {
             Bounds A = new Bounds();
@@ -877,6 +923,7 @@ namespace GerberLibrary
 
 
             B2.Save(BitmapFilename);
+            G2.Dispose();
             log.PopActivity();
             return true;
         }
@@ -1012,7 +1059,7 @@ namespace GerberLibrary
             G2.DrawLine(P, (float)X - S, (float)Y + S, (float)X + S, (float)Y + S);
             G2.DrawLine(P, (float)X - S, (float)Y - S, (float)X - S, (float)Y + S);
             G2.DrawLine(P, (float)X + S, (float)Y - S, (float)X + S, (float)Y + S);
-
+            P.Dispose();
         }
 
         private static double LimitPos2PI(double dA)

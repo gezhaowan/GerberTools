@@ -218,7 +218,7 @@ namespace GerberLibrary
             return Res;
         }
 
-        public static ParsedGerber LoadExcellonDrillFileFromStream(ProgressLog log,  StreamReader s, string origfilename, bool Precombine = false, double drillscaler = 1.0)
+        public static ParsedGerber LoadExcellonDrillFileFromStream(ProgressLog log,  StreamReader s, string origfilename, bool Precombine = false, double drillscaler = 1.0, double drillRadiusScaler = 1.0f)
         {
             ParsedGerber Gerb = new ParsedGerber();
             Gerb.Name = origfilename;
@@ -232,7 +232,7 @@ namespace GerberLibrary
             };
 
             ExcellonFile EF = new ExcellonFile();
-            EF.Load(log, s, drillscaler);
+            EF.Load(log, s, drillscaler, drillRadiusScaler);
             foreach (var T in EF.Tools)
             {
                 var Tool = T.Value;
