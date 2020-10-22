@@ -143,7 +143,7 @@ namespace GerberToImage
 
             GIC.SetColors(colors);
             //GIC.WriteImageFiles(TargetFileBaseName, 96, false, xray, normal, new StandardConsoleLog());
-            GIC.DrawAllFilesForPrintPcb(TargetFileBaseName, dpi, null);
+            GIC.DrawAllFilesForPrintPcb(TargetFileBaseName, dpi);
             Console.WriteLine("Done writing {0}", TargetFileBaseName);
             GIC.Dispose();
             GC.Collect();

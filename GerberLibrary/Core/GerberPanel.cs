@@ -61,7 +61,7 @@ namespace GerberLibrary
 
         public override void AddString(string text, float progress = -1)
         {
-            //Console.WriteLine(GetDefaultText(text, progress));
+            Console.WriteLine(GetDefaultText(text, progress));
         }
     }
 

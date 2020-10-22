@@ -12,9 +12,24 @@ using GerberLibrary.Core;
 using GerberLibrary.Core.Primitives;
 using Ionic.Zip;
 using TriangleNet;
+using System.Windows.Forms;
 
 namespace GerberLibrary
 {
+    public enum ImageType
+    {
+        TopView,
+        BottomView,
+        PrintLayer,
+    }
+    public struct GerberParseProgressInfo
+    {
+        public ImageType ImgType;
+        public int LayerIndex;
+        public string FilePath;
+
+    }
+    public delegate void GerberParseProgressDelegate(GerberParseProgressInfo info);
     public class GerberImageCreator:IDisposable
     {
         public static bool AA = true;
@@ -24,7 +39,6 @@ namespace GerberLibrary
         private BoardRenderColorSet ActiveColorSet = new BoardRenderColorSet();
         Dictionary<string, MemoryStream> Streams = new Dictionary<string, MemoryStream>();
         public Dictionary<string, double> DrillFileScale = new Dictionary<string, double>();
-
 
         bool hasgko = false;
 
@@ -2289,121 +2303,133 @@ namespace GerberLibrary
         /// <param name="outputDir">输出文件目录</param>
         /// <param name="dpi"></param>
         /// <param name="Logger"></param>
-        public void DrawAllFilesForPrintPcb(string outputDir, double dpi, ProgressLog Logger = null)
+        public int DrawAllFilesForPrintPcb(string outputDir, double dpi, ProgressLog Logger = null, GerberParseProgressDelegate callbackProgress = null)
         {
-            var CurrentLayer = BoardSide.Top;
-            Bitmap B = DrawBoard_V2(dpi, CurrentLayer, ActiveColorSet, outputDir, Logger);
-            string filenameT = outputDir + "_Combined_" + CurrentLayer.ToString() + ".png";
-            B.Save(filenameT, System.Drawing.Imaging.ImageFormat.Png);
-            B.Dispose();
-            //GC.Collect();
-            //return;
-            B = DrawBoard_V2(dpi, CurrentLayer, ActiveColorSet, outputDir, Logger);
-            filenameT = outputDir + "_Combined_" + CurrentLayer.ToString() + ".png";
-            B.Save(filenameT, System.Drawing.Imaging.ImageFormat.Png);
-            B.Dispose();
-            //GC.Collect();
-
-            Color backColor = Color.FromArgb(255,0,255,255);
-            Color foreColor = Color.FromArgb(255,255,0,255);
-            Color drillForeColor = Color.FromArgb(255, 255, 255, 0);
-            scale = dpi / 25.4d; // dpi
-            var OutlineBoundingBox = GetOutlineBoundingBox();
-
-            double bw = Math.Abs(OutlineBoundingBox.BottomRight.X - OutlineBoundingBox.TopLeft.X);
-            double bh = Math.Abs(OutlineBoundingBox.BottomRight.Y - OutlineBoundingBox.TopLeft.Y);
-            int width = (int)((bw * scale));
-            int height = (int)((bh * scale));
-
-            //if (width > scale * 100) width =  (int)(scale * 100);
-            //if (height > scale * 100) height = (int)(scale * 100);
-
-            int w = width + 3;
-            int h = height + 3;
-
-            List<List<string>> artWorkConfigs = InitArtWorkConfigs(true, false, false, false);
-            for (int i = artWorkConfigs.Count - 1; i >= 0; i--)
+            try
             {
-                Bitmap layerBmpCombined = new Bitmap(w, h, PixelFormat.Format24bppRgb);
-                Graphics G = Graphics.FromImage(layerBmpCombined);
-                ApplyAASettings(G);
-                G.Clear(drillForeColor); // 透明色填充全图
-                G.TranslateTransform(0, h);
-                G.ScaleTransform(1, -1);
+                Color backColor = Color.FromArgb(255, 0, 255, 255);
+                Color foreColor = Color.FromArgb(255, 255, 0, 255);
+                Color drillForeColor = Color.FromArgb(255, 255, 255, 0);
+                scale = dpi / 25.4d; // dpi
+                var OutlineBoundingBox = GetOutlineBoundingBox();
 
-                G.TranslateTransform(1, 1);
-                G.ScaleTransform((float)scale, (float)scale);
-                G.TranslateTransform((float)-OutlineBoundingBox.TopLeft.X, (float)-OutlineBoundingBox.TopLeft.Y);
-                var G3 = new GraphicsGraphicsInterface(G);
-                if(hasgko) // 背景色填充边框内部区域
+                double bw = Math.Abs(OutlineBoundingBox.BottomRight.X - OutlineBoundingBox.TopLeft.X);
+                double bh = Math.Abs(OutlineBoundingBox.BottomRight.Y - OutlineBoundingBox.TopLeft.Y);
+                int width = (int)((bw * scale));
+                int height = (int)((bh * scale));
+
+                //if (width > scale * 100) width =  (int)(scale * 100);
+                //if (height > scale * 100) height = (int)(scale * 100);
+
+                int w = width + 3;
+                int h = height + 3;
+
+                List<List<string>> artWorkConfigs = InitArtWorkConfigs(true, false, false, false);
+                for (int i = artWorkConfigs.Count - 1; i >= 0; i--)
                 {
-                    for (int m = 0; m < PLSs.Count; m++)
+                    Bitmap layerBmpCombined = new Bitmap(w, h, PixelFormat.Format24bppRgb);
+                    Graphics G = Graphics.FromImage(layerBmpCombined);
+                    ApplyAASettings(G);
+                    G.Clear(drillForeColor); // 透明色填充全图
+                    G.TranslateTransform(0, h);
+                    G.ScaleTransform(1, -1);
+
+                    G.TranslateTransform(1, 1);
+                    G.ScaleTransform((float)scale, (float)scale);
+                    G.TranslateTransform((float)-OutlineBoundingBox.TopLeft.X, (float)-OutlineBoundingBox.TopLeft.Y);
+                    var G3 = new GraphicsGraphicsInterface(G);
+                    if (hasgko) // 背景色填充边框内部区域
                     {
-                        if (PLSs[m].Layer == BoardLayer.Outline&&Path.GetExtension(PLSs[m].Name) == ".GM1")
+                        for (int m = 0; m < PLSs.Count; m++)
                         {
-                            Pen P = new Pen(backColor, 1.0f / (float)(scale));
-                            DrawLayerToGraphics(backColor, true, G3, P, PLSs[m],true);
+                            if (PLSs[m].Layer == BoardLayer.Outline && Path.GetExtension(PLSs[m].Name) == ".GM1")
+                            {
+                                Pen P = new Pen(backColor, 1.0f / (float)(scale));
+                                DrawLayerToGraphics(backColor, true, G3, P, PLSs[m], true);
+                                P.Dispose();
+                                break;
+                            }
+                        }
+                    }
+                    // 3 绘制各层图像
+                    for (int j = 0; j < artWorkConfigs[i].Count; j++)
+                    {
+                        // 先画钻孔之外的其他文件
+                        for (int m = 0; m < PLSs.Count; m++)
+                        {
+                            if (Path.GetExtension(PLSs[m].Name).ToUpper() != artWorkConfigs[i][j])
+                                continue;
+                            if (PLSs[m].Layer == BoardLayer.Drill && !PLSs[m].IsDrillHoleOuterRing)
+                                continue;
+
+                            bool bFill = true;
+                            Color drawColor = Color.Transparent;
+                            if (PLSs[m].Layer == BoardLayer.Outline
+                               || PLSs[m].Layer == BoardLayer.Silk
+                               || PLSs[m].Layer == BoardLayer.Mill
+                               )
+                            {
+                                drawColor = foreColor;
+                                bFill = false;
+                            }
+                            else
+                            {
+                                drawColor = foreColor;
+                                bFill = true;
+                            }
+                            Pen P = new Pen(drawColor, 1.0f / (float)(scale));
+                            DrawLayerToGraphics(drawColor, bFill, G3, P, PLSs[m]);
                             P.Dispose();
-                            break;
+                        }
+                        // 钻孔
+                        for (int m = 0; m < PLSs.Count; m++)
+                        {
+                            if (Path.GetExtension(PLSs[m].Name).ToUpper() != artWorkConfigs[i][j])
+                                continue;
+                            bool bFill = true;
+                            Color drawColor = Color.Transparent;
+                            if (PLSs[m].Layer == BoardLayer.Drill && !PLSs[m].IsDrillHoleOuterRing)
+                            {
+                                drawColor = drillForeColor;
+                                bFill = true;
+                            }
+                            else
+                            {
+                                continue;
+                            }
+                            Pen P = new Pen(drawColor, 1.0f / (float)(scale));
+                            DrawLayerToGraphics(drawColor, bFill, G3, P, PLSs[m]);
+                            P.Dispose();
                         }
                     }
+                    string filename = outputDir + "_Combined_" + i.ToString() + ".png";
+                    layerBmpCombined.Save(filename, System.Drawing.Imaging.ImageFormat.Png);
+                    layerBmpCombined.Dispose();
+                    G.Dispose();
+                    callbackProgress?.Invoke(new GerberParseProgressInfo() { ImgType = ImageType.PrintLayer, LayerIndex = artWorkConfigs.Count-1 - i, FilePath = filename });
                 }
-                // 3 绘制各层图像
-                for (int j = 0; j < artWorkConfigs[i].Count; j++)
-                {
-                    // 先画钻孔之外的其他文件
-                    for (int m = 0; m < PLSs.Count; m++)
-                    {
-                        if (Path.GetExtension(PLSs[m].Name).ToUpper() != artWorkConfigs[i][j])
-                            continue;
-                        if (PLSs[m].Layer == BoardLayer.Drill && !PLSs[m].IsDrillHoleOuterRing)
-                            continue;
 
-                        bool bFill = true;
-                        Color drawColor = Color.Transparent;
-                        if (PLSs[m].Layer == BoardLayer.Outline
-                           || PLSs[m].Layer == BoardLayer.Silk
-                           || PLSs[m].Layer == BoardLayer.Mill
-                           )
-                        {
-                            drawColor = foreColor;
-                            bFill = false;
-                        }
-                        else
-                        {
-                            drawColor = foreColor;
-                            bFill = true;
-                        }
-                        Pen P = new Pen(drawColor, 1.0f / (float)(scale));
-                        DrawLayerToGraphics(drawColor, bFill, G3, P, PLSs[m]);
-                        P.Dispose();
-                    }
-                    // 钻孔
-                    for (int m = 0; m < PLSs.Count; m++)
-                    {
-                        if (Path.GetExtension(PLSs[m].Name).ToUpper() != artWorkConfigs[i][j])
-                            continue;
-                        bool bFill = true;
-                        Color drawColor = Color.Transparent;
-                        if (PLSs[m].Layer == BoardLayer.Drill && !PLSs[m].IsDrillHoleOuterRing)
-                        {
-                            drawColor = drillForeColor;
-                            bFill = true;
-                        }
-                        else
-                        {
-                            continue;
-                        }
-                        Pen P = new Pen(drawColor, 1.0f / (float)(scale));
-                        DrawLayerToGraphics(drawColor, bFill, G3, P, PLSs[m]);
-                        P.Dispose();
-                    }
-                }
-                string filename = outputDir + "_Combined_" + i.ToString() + ".png";
-                layerBmpCombined.Save(filename, System.Drawing.Imaging.ImageFormat.Png);
-                layerBmpCombined.Dispose();
-                G.Dispose();
-                //GC.Collect();
+                var CurrentLayer = BoardSide.Top;
+                Bitmap B = DrawBoard_V2(dpi, CurrentLayer, ActiveColorSet, outputDir, Logger);
+                string filenameT = outputDir + "_Combined_" + CurrentLayer.ToString() + ".png";
+                B.Save(filenameT, System.Drawing.Imaging.ImageFormat.Png);
+                B.Dispose();
+
+                callbackProgress?.Invoke(new GerberParseProgressInfo() { ImgType = ImageType.TopView, LayerIndex = -1, FilePath = filenameT });
+
+                CurrentLayer = BoardSide.Bottom;
+                B = DrawBoard_V2(dpi, CurrentLayer, ActiveColorSet, outputDir, Logger);
+                filenameT = outputDir + "_Combined_" + CurrentLayer.ToString() + ".png";
+                B.Save(filenameT, System.Drawing.Imaging.ImageFormat.Png);
+                B.Dispose();
+                callbackProgress?.Invoke(new GerberParseProgressInfo() { ImgType = ImageType.BottomView, LayerIndex = -1, FilePath = filenameT });
+
+                return 1;
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                return 0;
             }
         }
 
@@ -2411,7 +2437,7 @@ namespace GerberLibrary
         /// 生成工艺配置文件,从gerber文件夹解析一共多少个打印层,每层由哪些gerber文件合并构成
         /// </summary>
         /// <returns></returns>
-        private List<List<string>> InitArtWorkConfigs(bool bPrintPaste,bool bPrintSolder,bool bPrintOutLine,bool bPrintOverlay)
+        public List<List<string>> InitArtWorkConfigs(bool bPrintPaste,bool bPrintSolder,bool bPrintOutLine,bool bPrintOverlay)
         {
             List<Tuple<int, string, string>> extMeans = new List<Tuple<int, string, string>>(); // 层序号,后缀名,层描述
             //Dictionary<int, List<string>> ret = new Dictionary<int, List<string>>();
@@ -2488,7 +2514,7 @@ namespace GerberLibrary
                     }
                 }
             }
-            if(bPrintPaste) // 焊盘/锡膏层
+            if(bPrintPaste&& basePcbConfig.Count > 0) // 焊盘/锡膏层
             {
                 List<string> topPaste = new List<string>() { ".GTP"};
                 for (int i = 1; i < basePcbConfig[0].Count; i++) // 复制除基础层外的其他层
