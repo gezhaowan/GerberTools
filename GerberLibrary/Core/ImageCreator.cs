@@ -2307,9 +2307,9 @@ namespace GerberLibrary
         {
             try
             {
-                Color backColor = Color.FromArgb(255, 0, 255, 255);
-                Color foreColor = Color.FromArgb(255, 255, 0, 255);
-                Color drillForeColor = Color.FromArgb(255, 255, 255, 0);
+                Color backColor = Color.Red;// Color.FromArgb(255, 0, 255, 255);
+                Color foreColor = Color.Green;// Color.FromArgb(255, 255, 0, 255);
+                Color drillForeColor = Color.White;// Color.FromArgb(255, 255, 255, 0);
                 scale = dpi / 25.4d; // dpi
                 var OutlineBoundingBox = GetOutlineBoundingBox();
 
