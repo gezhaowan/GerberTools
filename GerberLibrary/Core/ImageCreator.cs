@@ -2408,7 +2408,7 @@ namespace GerberLibrary
                     G.Dispose();
                     callbackProgress?.Invoke(new GerberParseProgressInfo() { ImgType = ImageType.PrintLayer, LayerIndex = artWorkConfigs.Count-1 - i, FilePath = filename });
                 }
-
+#if false  //20201117 gzw 临时关闭top/Bottom预览生成,因耗时太长
                 var CurrentLayer = BoardSide.Top;
                 Bitmap B = DrawBoard_V2(dpi, CurrentLayer, ActiveColorSet, outputDir, Logger);
                 string filenameT = outputDir + "_Combined_" + CurrentLayer.ToString() + ".png";
@@ -2423,7 +2423,7 @@ namespace GerberLibrary
                 B.Save(filenameT, System.Drawing.Imaging.ImageFormat.Png);
                 B.Dispose();
                 callbackProgress?.Invoke(new GerberParseProgressInfo() { ImgType = ImageType.BottomView, LayerIndex = -1, FilePath = filenameT });
-
+#endif
                 return 1;
             }
             catch(Exception ex)
@@ -2564,7 +2564,7 @@ namespace GerberLibrary
             PLSs.Clear();
         }
 
-    #endregion
+#endregion
 }
 
     public class LockBitmap
