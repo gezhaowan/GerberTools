@@ -70,6 +70,44 @@ namespace GerberLibrary
         public static bool WriteSanitized = false;
         #endregion
 
+        public static string FindOutlineFile(string folder)
+        {
+            if (Directory.Exists(folder) == false) return null;
+            foreach (var a in Directory.GetFiles(folder))
+            {
+                BoardSide bs;
+                BoardLayer bl;
+                DetermineBoardSideAndLayer(a, out bs, out bl);
+                if (bl == BoardLayer.Outline) return a;
+            }
+
+            foreach (var a in Directory.GetFiles(folder))
+            {
+                BoardSide bs;
+                BoardLayer bl;
+                DetermineBoardSideAndLayer(a, out bs, out bl);
+                if (bl == BoardLayer.Mill) return a;
+            }
+            return null;
+
+        }
+        public static PolyLine FindAndLoadOutlineFile(string folder)
+        {
+
+            string File = FindOutlineFile(folder);
+            if (File == null || File.Length == 0) return null;
+
+            PolyLine PL = new PolyLine(PolyLine.PolyIDs.Outline);
+            ParsedGerber pls = PolyLineSet.LoadGerberFile(new StandardConsoleLog(), File);
+            if (pls.OutlineShapes.Count > 0)
+            {
+                return pls.OutlineShapes[0];
+            }
+
+            return null;
+        }
+
+
         public static void ZipGerberFolderToFactoryFolder(string Name, string BoardGerbersFolder, string BoardFactoryFolder)
         {
             if (Directory.Exists(BoardGerbersFolder))
@@ -507,6 +545,7 @@ namespace GerberLibrary
 
                 case "l2":
                 case "gl1":
+                case "g1":
                     Side = BoardSide.Internal1;
                     Layer = BoardLayer.Copper;
                     break;
@@ -528,6 +567,7 @@ namespace GerberLibrary
 
                 case "l3":
                 case "gl2":
+                case "g2":
                     Side = BoardSide.Internal2;
                     Layer = BoardLayer.Copper;
                     break;
@@ -644,6 +684,8 @@ namespace GerberLibrary
                 case "drl":
                 case "drill":
                 case "drillnpt":
+                case "rou":
+                case "sco":
                     Side = BoardSide.Both;
                     Layer = BoardLayer.Drill;
                     break;
@@ -1174,6 +1216,77 @@ namespace GerberLibrary
         {
             return "%AM" + name + "*" + Gerber.LineEnding;
         }
-#endregion
-    }   
+        #endregion
+    }
+
+    public class LayerSet
+    {
+        public List<ParsedGerber> Gerbs = new List<ParsedGerber>();
+        public List<string> Files = new List<string>();
+        public BoardSide Side;
+        public BoardLayer Layer;
+        public static List<LayerSet> LoadDefaultLayersetFromZip(string gerberFile)
+        {
+
+            List<LayerSet> LayerSets = new List<LayerSet>();
+
+
+
+            LayerSets.Add(new LayerSet() { Side = BoardSide.Both, Layer = BoardLayer.Outline });
+            LayerSets.Add(new LayerSet() { Side = BoardSide.Top, Layer = BoardLayer.SolderMask });
+            LayerSets.Add(new LayerSet() { Side = BoardSide.Top, Layer = BoardLayer.Silk });
+            LayerSets.Add(new LayerSet() { Side = BoardSide.Bottom, Layer = BoardLayer.SolderMask });
+            LayerSets.Add(new LayerSet() { Side = BoardSide.Bottom, Layer = BoardLayer.Silk });
+
+            GerberLibrary.GerberImageCreator GIC = new GerberLibrary.GerberImageCreator();
+
+            List<string> res = new List<string>();
+            Dictionary<string, MemoryStream> Files = new Dictionary<string, MemoryStream>();
+            using (Ionic.Zip.ZipFile zip1 = Ionic.Zip.ZipFile.Read(gerberFile))
+            {
+                foreach (ZipEntry e in zip1)
+                {
+                    MemoryStream MS = new MemoryStream();
+                    if (e.IsDirectory == false)
+                    {
+                        e.Extract(MS);
+                        MS.Seek(0, SeekOrigin.Begin);
+                        Files[e.FileName] = MS;
+                    }
+                }
+            }
+
+
+            string[] FileNames = Files.Keys.ToArray();
+            List<string> outlinefiles = new List<string>();
+            List<string> topsilkfiles = new List<string>();
+            List<string> bottomsilkfiles = new List<string>();
+
+            foreach (var F in FileNames)
+            {
+                BoardSide BS = BoardSide.Unknown;
+                BoardLayer BL = BoardLayer.Unknown;
+                Files[F].Seek(0, SeekOrigin.Begin);
+                if (Gerber.FindFileTypeFromStream(new StreamReader(Files[F]), F) == BoardFileType.Gerber)
+                {
+                    Gerber.DetermineBoardSideAndLayer(F, out BS, out BL);
+                    foreach (var l in LayerSets)
+                    {
+                        if (l.Side == BS && l.Layer == BL)
+                        {
+                            l.Files.Add(F);
+                            Files[F].Seek(0, SeekOrigin.Begin);
+                            var pls = PolyLineSet.LoadGerberFileFromStream(new StandardConsoleLog(), new StreamReader(Files[F]), F, true, false, new GerberParserState() { PreCombinePolygons = false });
+                            l.Gerbs.Add(pls);
+                        }
+                    }
+                }
+            }
+
+
+            return LayerSets;
+
+        }
+
+    }
 }

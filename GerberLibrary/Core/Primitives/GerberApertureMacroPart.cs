@@ -8,6 +8,16 @@ namespace GerberLibrary.Core.Primitives
 {
     public class GerberApertureMacroPart
     {
+
+        public override string ToString()
+        {
+            switch(Type)
+            {
+                case ApertureMacroTypes.CenterLine: return String.Format("Circle {0},{1} - {2}", Xoff, Yoff, Diameter);
+                case ApertureMacroTypes.Circle: return String.Format("Circle {0},{1} - {2}", Xoff, Yoff, Diameter);
+            }
+            return String.Format("{0}", Type);
+        }
         public enum ApertureMacroTypes
         {
             Circle = 1,
@@ -647,6 +657,7 @@ namespace GerberLibrary.Core.Primitives
             }
         }
         public List<OutlineParameterPoint> OutlineVertices;
+        public double OutlineRotation;
         public List<PointD> OutlineVerticesPostProc;
         private double Xend;
         private double Yend;
@@ -658,13 +669,23 @@ namespace GerberLibrary.Core.Primitives
         private double CrossHairThickness;
         private double CrossHairLength;
 
+        int SaneIntParse(string inp)
+        {
+            if (inp.Contains('.'))
+            {
+                return Int32.Parse(inp.Split('.')[0]);
+            }
+            return Int32.Parse(inp);
+        }
         public void DecodeOutline(string line, GerberNumberFormat GNF)
         {
+            Decode(line, GNF);
+            //xqetqwet
             OutlineVertices = new List< OutlineParameterPoint>();
             string[] v = line.Split(',');
 
             //  if (Gerber.Verbose) Console.WriteLine("decoding {0}", lines[currentline]);
-            int vertices = Int32.Parse(v[2]) + 1;
+            int vertices = SaneIntParse(v[2]) + 1;
             if (Gerber.ShowProgress) Console.WriteLine("{0} vertices", vertices);
             int idx = 2;
             int i = 0;
@@ -719,6 +740,17 @@ namespace GerberLibrary.Core.Primitives
                 OutlineVertices.Add(new OutlineParameterPoint() { Point = new PointD(X, Y) , xParamBound =xparambound, yexpr= yexpr, xexpr= xexpr, yParamBound = yparambound});
                 i++;
 
+            }
+            if (v.Length >= (vertices-1) * 2 + 5)
+            {
+                OutlineRotation = (Gerber.ParseDouble(v[v.Length-1]));
+                
+                foreach(var ov in OutlineVertices)
+                {
+                    ov.Point = ov.Point.Rotate(OutlineRotation);
+                }
+
+                // rotate! 
             }
 
             //       throw new NotImplementedException();

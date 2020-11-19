@@ -42,7 +42,7 @@ namespace GerberLibrary
 
         bool hasgko = false;
 
-        List<ParsedGerber> PLSs = new List<ParsedGerber>();
+      public  List<ParsedGerber> PLSs = new List<ParsedGerber>();
 
         public ParsedGerber GetGerberByName(string name)
         {
@@ -111,6 +111,52 @@ namespace GerberLibrary
             GAW.Write(outputfile);
         }
 
+        public void Translate(double x, double y)
+        {
+            BoundingBox.Reset();
+            foreach (var f in PLSs)
+            {
+                f.Translate(new PointD(x,y));
+                f.CalcPathBounds();
+                BoundingBox.AddBox(f.BoundingBox);
+            }
+        }
+
+        public void FlipXY()
+        {
+            BoundingBox.Reset();
+            foreach (var f in PLSs)
+            {
+                f.FlipXY();
+                f.CalcPathBounds();
+                BoundingBox.AddBox(f.BoundingBox);
+            }
+        }
+
+        public void FlipX()
+        {
+            BoundingBox.Reset();
+            foreach (var f in PLSs)
+            {
+                f.FlipX();
+                f.CalcPathBounds();
+                BoundingBox.AddBox(f.BoundingBox);
+            }
+        }
+
+        public void SetBottomRightToZero()
+        {
+            double dx = this.BoundingBox.BottomRight.X;
+            double dy = this.BoundingBox.TopLeft.Y;
+            BoundingBox.Reset();
+            foreach (var f in PLSs)
+            {
+                f.Translate(new PointD(-dx, -dy));
+                f.CalcPathBounds();
+                BoundingBox.AddBox(f.BoundingBox);
+            }
+        }
+
         private bool IsInPolygons(ParsedGerber toclip, List<ParsedGerber> ols)
         {
             foreach (var o in ols)
@@ -131,6 +177,35 @@ namespace GerberLibrary
             }
 
             return true;
+
+        }
+
+        public void CopyFrom(GerberImageCreator set)
+        {
+            foreach(var p in set.PLSs)
+            {
+                ParsedGerber PG = new ParsedGerber();
+                PG.CopyFrom(p);
+                PG.Side = p.Side;
+                PG.Layer = p.Layer;
+                PG.CalcPathBounds();
+                BoundingBox.AddBox(PG.BoundingBox);
+                PLSs.Add(PG);
+            }
+        }
+
+        public void SetBottomLeftToZero()
+        {
+            double dx = this.BoundingBox.TopLeft.X;
+            double dy = this.BoundingBox.TopLeft.Y;
+            BoundingBox.Reset();
+            foreach(var f in PLSs)
+            {
+                f.Translate(new PointD(-dx, -dy));
+                f.CalcPathBounds();
+                BoundingBox.AddBox(f.BoundingBox);
+            }
+
 
         }
 
@@ -173,10 +248,12 @@ namespace GerberLibrary
             return Color.FromArgb(color.A, (int)red, (int)green, (int)blue);
         }
 
-        public void AddBoardsToSet(List<string> FileList, ProgressLog Logger , bool fixgroup = true, double drillRadiusScaler = 1.0f)
+        public void AddBoardsToSet(List<string> FileList, ProgressLog Logger , bool fixgroup = true, bool forcezerowidth = false, double drillRadiusScaler = 1.0f)
         {
+            Logger.PushActivity("AddBoardsToSet");
             foreach (var a in FileList)
             {
+                Logger.AddString(String.Format("adding {0}", a));
                 BoardSide aSide = BoardSide.Unknown;
                 BoardLayer aLayer = BoardLayer.Unknown;
                 string ext = Path.GetExtension(a);
@@ -224,7 +301,7 @@ namespace GerberLibrary
 
                                 e.Extract(MS);
                                 MS.Seek(0, SeekOrigin.Begin);
-                                AddFileToSet(MS, e.FileName, Logger,1,drillRadiusScaler);
+                                AddFileToSet(MS, e.FileName, Logger,1, forcezerowidth,drillRadiusScaler);
                             }
                         }
                     }
@@ -238,11 +315,11 @@ namespace GerberLibrary
                         FS.CopyTo(MS2);
                         FS.Close();
                         MS2.Seek(0, SeekOrigin.Begin);
-                        AddFileToSet(MS2, a, Logger,1, drillRadiusScaler);
+                        AddFileToSet(MS2, a, Logger,1, forcezerowidth, drillRadiusScaler);
                     }
                     catch (Exception E)
                     {
-                        Logger.AddString(String.Format("Failed to add file! {0}", a));
+                        Logger.AddString(String.Format("Failed to add file! {0},{1}", a, E));
                     }
                 }
             }
@@ -257,6 +334,8 @@ namespace GerberLibrary
                 CheckRelativeBoundingBoxes(Logger);
 
             }
+
+            Logger.PopActivity();
         }
 
         public ParsedGerber AddBoardToSet(string _originalfilename, ProgressLog log, bool forcezerowidth = false, bool precombinepolygons = false, double drillscaler = 1.0, double drillRadiusScaler = 1.0f)
@@ -533,21 +612,21 @@ namespace GerberLibrary
                 DrawToFile(TargetFileBaseName, BoardSide.Bottom, dpi, showimage, Logger);
             }
 
-            //if (xray)
-            //{
+            if (xray)
+            {
             
-            //    if (Logger != null) Logger.AddString(String.Format("Build xray images at {0} dpi", dpi));
-            //    DrawXRayToFile(TargetFileBaseName, dpi, showimage, true, Logger);
-            //}
+                if (Logger != null) Logger.AddString(String.Format("Build xray images at {0} dpi", dpi));
+                DrawXRayToFile(TargetFileBaseName, dpi, showimage, true, Logger);
+            }
 
 
         }
 
-        private void AddFileToSet(string aname, ProgressLog Logger, double drillscaler = 1.0, double drillRadiusScaler = 1.0f)
+        private void AddFileToSet(string aname, ProgressLog Logger, double drillscaler = 1.0, bool forcezerowidth = false, double drillRadiusScaler = 1.0f)
         {
             if (Streams.ContainsKey(aname))
             {
-                AddFileToSet(Streams[aname], aname, Logger, drillscaler, drillRadiusScaler);
+                AddFileToSet(Streams[aname], aname, Logger, drillscaler, forcezerowidth, drillRadiusScaler);
             }
             else
             {
@@ -555,14 +634,14 @@ namespace GerberLibrary
             }
         }
 
-        private void AddFileToSet(MemoryStream MS, string aname, ProgressLog Logger, double drillscaler = 1.0, double drillRadiusScaler = 1.0f)
+        private void AddFileToSet(MemoryStream MS, string aname, ProgressLog Logger, double drillscaler = 1.0, bool forcezerowidth = false, double drillRadiusScaler = 1.0f)
         {
 
             Streams[aname] = MS;
 
             ///string[] filesplit = a.Split('.');
 
-            bool zerowidth = false;
+            bool zerowidth = forcezerowidth;
             bool precombine = false;
 
             BoardSide aSide;
@@ -1666,6 +1745,7 @@ namespace GerberLibrary
                 }
             }
 
+
             BoundingBox = new Bounds();
             foreach (var a in PLSs)
             {
@@ -1678,7 +1758,7 @@ namespace GerberLibrary
         }
 
 
-        private Bounds GetOutlineBoundingBox()
+        public Bounds GetOutlineBoundingBox()
         {
             Bounds B = new Bounds();
             int i = 0;

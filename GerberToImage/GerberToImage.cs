@@ -134,7 +134,7 @@ namespace GerberToImage
                     FileList[i] = Path.GetDirectoryName(FileList[i]);
                 }
             }
-            GIC.AddBoardsToSet(FileList, new StandardConsoleLog(), true, 0.8);
+            GIC.AddBoardsToSet(FileList, new StandardConsoleLog(), true,false, 0.8);
             BoardRenderColorSet colors = new BoardRenderColorSet();
 
             if (pcbcolor == "") pcbcolor = "black";

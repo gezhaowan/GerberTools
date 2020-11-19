@@ -13,7 +13,8 @@ namespace GerberLibrary.Core.Primitives
 {
     public class PolyLine:IDisposable
     {
-        public enum PolyIDs{
+        public enum PolyIDs
+        {
             Outline = -20,
             Bitmap = -30,
             No = -2,
@@ -29,7 +30,10 @@ namespace GerberLibrary.Core.Primitives
         }
 
         public int ID = -1;
-
+        public override string ToString()
+        {
+            return String.Format("{0} vertices, bounds: {1}", Vertices.Count, GetBounds());
+        }
         public PolyLine() : this(PolyIDs.Temp) { }
 
         public PolyLine(PolyIDs nID )
@@ -53,6 +57,14 @@ namespace GerberLibrary.Core.Primitives
             {
                 PL.Add(a.X, a.Y);
             }
+            PL.ID = ID;
+            PL.Hole = Hole;
+            PL.Width = Width;
+            PL.Thin = Thin;
+            PL.ClearanceMode = ClearanceMode;
+            PL.Draw = Draw;
+            PL.MyColor = MyColor;
+            
             return PL;
         }
 
@@ -147,6 +159,24 @@ namespace GerberLibrary.Core.Primitives
                 }
             }
 
+        }
+
+        internal void FlipXY()
+        {
+            for (int i = 0; i < Vertices.Count; i++)
+            {
+                var T = Vertices[i].X;
+                Vertices[i].X = Vertices[i].Y;
+                Vertices[i].Y = T;
+            }
+        }
+
+        internal void FlipX()
+        {
+            for (int i = 0; i < Vertices.Count; i++)
+            {
+                Vertices[i].X = -Vertices[i].X;
+            }
         }
 
         public Polygon toPolygon()
@@ -645,6 +675,36 @@ namespace GerberLibrary.Core.Primitives
 
         }
 
+        internal List<PolyLine> Offset(double margin, int v)
+        {
+            List<PolyLine> Res = new List<PolyLine>();
+
+            
+            Polygons clips = new Polygons();
+            Polygon b = this.toPolygon();
+
+            clips.Add(b);
+            Polygons clips2 = Clipper.OffsetPolygons(clips, margin* 100000.0f, JoinType.jtRound);
+
+            foreach(var r in clips2)
+            {
+                PolyLine PLR = new PolyLine(v++);
+                PLR.fromPolygon(r);
+                Res.Add(PLR);
+            }
+            
+            
+            return Res;
+
+        }
+        public void MakeTriangle(PointD A, PointD B, PointD C)
+        {
+            Vertices.Clear();
+            Vertices.Add(A);
+            Vertices.Add(B);
+            Vertices.Add(C);
+
+        }
         public void Dispose()
         {
             Vertices.Clear();

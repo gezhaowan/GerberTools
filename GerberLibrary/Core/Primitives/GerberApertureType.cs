@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ClipperLib;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -248,7 +249,7 @@ namespace GerberLibrary.Core.Primitives
         public int NGonSides = 0;
         public double NGonRotation = 0;
         public bool ZeroWidth = false;
-        internal bool Polarity;
+        public bool Polarity;
 
         public List<string> GerberLines;
 
@@ -351,33 +352,71 @@ namespace GerberLibrary.Core.Primitives
                 }
                 foreach (var a in Parts.Where(x => x.Polarity == false))
                 {
-                    ResPre.AddRange(a.CreatePolyLineSet(0, 0, ShapeID, 0, 1, GerberParserState.MirrorMode.NoMirror));
+                    ResPreNeg.AddRange(a.CreatePolyLineSet(0, 0, ShapeID, 0, 1, GerberParserState.MirrorMode.NoMirror));
                 }
                 Polygons Combined = new Polygons();
+                Polygons Solution = new Polygons();
+
 
                 Polygons clips = new Polygons();
 
-
-                foreach (var c in ResPre)
+               
+                if (ResPreNeg.Count == 0)
                 {
-                    //                    c.CheckIfHole();
-                    //Clipper cp = new Clipper();
-                    //cp.AddPolygons(Combined, PolyType.ptSubject);
-                    //clips.Add(c.toPolygon());
-                    //cp.AddPolygons(clips, PolyType.ptClip);
-                    //cp.Execute(ClipType.ctUnion, Combined, PolyFillType.pftNonZero, PolyFillType.pftEvenOdd);
+                    foreach (var c in ResPre)
+                    {
+                        //                    c.CheckIfHole();
+                        //clips.Add(c.toPolygon());
+                        //cp.AddPolygons(clips, PolyType.ptClip);
+                        //cp.Execute(ClipType.ctUnion, Combined, PolyFillType.pftNonZero, PolyFillType.pftEvenOdd);
 
-                    Combined.Add(c.toPolygon());
+                        Solution.Add(c.toPolygon());
 
+                    }
+                    foreach (var p in Solution)
+                    {
+                        PolyLine PL = new PolyLine(ShapeID);
+                        PL.fromPolygon(p);
+                        Res.Add(PL);
+                    }
                 }
-
-
-
-                foreach (var p in Combined)
+                else
                 {
-                    PolyLine PL = new PolyLine(ShapeID);
-                    PL.fromPolygon(p);
-                    Res.Add(PL);
+                    foreach (var c in ResPreNeg)
+                    {
+                        //                    c.CheckIfHole();
+                        //clips.Add(c.toPolygon());
+                        //cp.AddPolygons(clips, PolyType.ptClip);
+                        //cp.Execute(ClipType.ctUnion, Combined, PolyFillType.pftNonZero, PolyFillType.pftEvenOdd);
+
+                        clips.Add(c.toPolygon());
+
+                    }
+
+                    foreach (var c in ResPre)
+                    {
+                        //                    c.CheckIfHole();
+                        //clips.Add(c.toPolygon());
+                        //cp.AddPolygons(clips, PolyType.ptClip);
+                        //cp.Execute(ClipType.ctUnion, Combined, PolyFillType.pftNonZero, PolyFillType.pftEvenOdd);
+
+                        Combined.Add(c.toPolygon());
+
+                    }
+
+                    Clipper cp = new Clipper();
+                    cp.AddPolygons(Combined, PolyType.ptClip);
+                    cp.AddPolygons(clips, PolyType.ptSubject);
+
+                    cp.Execute(ClipType.ctDifference, Solution, PolyFillType.pftNonZero, PolyFillType.pftNonZero);
+
+
+                    foreach (var p in Solution)
+                    {
+                        PolyLine PL = new PolyLine(ShapeID);
+                        PL.fromPolygon(p);
+                        Res.Add(PL);
+                    }
                 }
             }
             else
@@ -466,10 +505,102 @@ namespace GerberLibrary.Core.Primitives
 
             Shape.RotateDegrees(Rotation);
         }
+
         internal void SetThermal(double Xoff, double Yoff, double OuterDiameter, double InnerDiameter, double GapWidth, double Rotation)
         {
             Shape.Vertices.Clear();
-            Console.WriteLine("TODO! Generate Thermal geometry for further processing!! ");
+            GerberApertureType sector1 = new GerberApertureType();
+            sector1.Shape.Vertices.Clear();
+            GerberApertureType sector2 = new GerberApertureType();
+            sector2.Shape.Vertices.Clear();
+            GerberApertureType sector3 = new GerberApertureType();
+            sector3.Shape.Vertices.Clear();
+            GerberApertureType sector4 = new GerberApertureType();
+            sector4.Shape.Vertices.Clear();
+            int sides =(int)Math.Floor(10 * Math.Max(18.0, OuterDiameter/2));
+            // draw outer arc
+            {
+                double radius = OuterDiameter / 2;
+                double padd = 0;// -rotation * Math.PI * 2.0 / 360;
+                for (int i = 0; i < sides; i++)
+                {
+                    double P = i / (double)sides * Math.PI * 2.0 + padd;
+                    double x = (double)(Xoff + Math.Sin(P) * radius);
+                    double y = (double)(Yoff + Math.Cos(P) * radius);
+                    if ((y < Yoff - GapWidth / 2) && (x < Xoff - GapWidth / 2))
+                    {
+                        if(i == 0)
+                            sector1.Shape.Add(Xoff - GapWidth / 2, Yoff - GapWidth / 2);
+                        sector1.Shape.Add(x, y);
+                    }
+                    if ((y < Yoff - GapWidth / 2)&& (x >= Xoff + GapWidth / 2))
+                    {
+                        if (i == 0)
+                            sector2.Shape.Add(Xoff + GapWidth / 2, Yoff - GapWidth / 2);
+                        sector2.Shape.Add(x, y);
+                    }
+                    if ((y >= Yoff + GapWidth / 2) && (x >= Xoff + GapWidth / 2))
+                    {
+                        if (i == 0)
+                            sector3.Shape.Add(Xoff + GapWidth / 2, Yoff + GapWidth / 2);
+                        sector3.Shape.Add(x, y);
+                    }
+                    if ((y >= Yoff + GapWidth / 2) && (x < Xoff - GapWidth / 2))
+                    {
+                        if (i == 0)
+                            sector4.Shape.Add(Xoff - GapWidth / 2, Yoff + GapWidth / 2);
+                        sector4.Shape.Add(x, y);
+                    }
+                }
+            }
+
+            // draw inner arc
+            {
+                double radius = InnerDiameter / 2;
+                double padd = 0;// -rotation * Math.PI * 2.0 / 360;
+                for (int i = sides - 1; i >= 0; i--)
+                {
+                    double P = i / (double)sides * Math.PI * 2.0 + padd;
+                    double x = (double)(Xoff + Math.Sin(P) * radius);
+                    double y = (double)(Yoff + Math.Cos(P) * radius);
+                    if ((y < Yoff - GapWidth / 2) && (x < Xoff - GapWidth / 2))
+                    {
+                        if (i == 0)
+                            sector1.Shape.Add(Xoff - GapWidth / 2, Yoff - GapWidth / 2);
+                        sector1.Shape.Add(x, y);
+                    }
+                    if ((y < Yoff - GapWidth / 2) && (x >= Xoff + GapWidth / 2))
+                    {
+                        if (i == 0)
+                            sector2.Shape.Add(Xoff + GapWidth / 2, Yoff - GapWidth / 2);
+                        sector2.Shape.Add(x, y);
+                    }
+                    if ((y >= Yoff + GapWidth / 2) && (x >= Xoff + GapWidth / 2))
+                    {
+                        if (i == 0)
+                            sector3.Shape.Add(Xoff + GapWidth / 2, Yoff + GapWidth / 2);
+                        sector3.Shape.Add(x, y);
+                    }
+                    if ((y >= Yoff + GapWidth / 2) && (x < Xoff - GapWidth / 2))
+                    {
+                        if (i == 0)
+                            sector4.Shape.Add(Xoff - GapWidth / 2, Yoff + GapWidth / 2);
+                        sector4.Shape.Add(x, y);
+                    }
+                }
+            }
+            sector1.Shape.Close();
+            sector1.Shape.RotateDegrees(Rotation);
+            sector2.Shape.Close();
+            sector2.Shape.RotateDegrees(Rotation);
+            sector3.Shape.Close();
+            sector3.Shape.RotateDegrees(Rotation);
+            sector4.Shape.Close();
+            sector4.Shape.RotateDegrees(Rotation);
+            Parts.Add(sector1);
+            Parts.Add(sector2);
+            Parts.Add(sector3);
+            Parts.Add(sector4);
         }
         internal void SetMoire(double Xoff, double Yoff, double OuterDiameter, double Width, double RingGap, int MaxRings, double CrossHairThickness, double CrossHairLength, double Rotation)
         {
