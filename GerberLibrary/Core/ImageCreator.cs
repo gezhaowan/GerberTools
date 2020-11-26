@@ -2387,6 +2387,10 @@ namespace GerberLibrary
         {
             try
             {
+                if(!Directory.Exists(outputDir))
+                {
+                    Directory.CreateDirectory(outputDir);
+                }
                 Color backColor = Color.Red;// Color.FromArgb(255, 0, 255, 255);
                 Color foreColor = Color.Green;// Color.FromArgb(255, 255, 0, 255);
                 Color drillForeColor = Color.White;// Color.FromArgb(255, 255, 255, 0);
@@ -2482,7 +2486,7 @@ namespace GerberLibrary
                             P.Dispose();
                         }
                     }
-                    string filename = outputDir + "_Combined_" + i.ToString() + ".png";
+                    string filename =Path.Combine(outputDir ,"Layer" + i.ToString() + ".png");
                     layerBmpCombined.Save(filename, System.Drawing.Imaging.ImageFormat.Png);
                     layerBmpCombined.Dispose();
                     G.Dispose();
@@ -2491,7 +2495,7 @@ namespace GerberLibrary
 #if false  //20201117 gzw 临时关闭top/Bottom预览生成,因耗时太长
                 var CurrentLayer = BoardSide.Top;
                 Bitmap B = DrawBoard_V2(dpi, CurrentLayer, ActiveColorSet, outputDir, Logger);
-                string filenameT = outputDir + "_Combined_" + CurrentLayer.ToString() + ".png";
+                string filenameT = Path.Combine(outputDir + ,CurrentLayer.ToString() + ".png");
                 B.Save(filenameT, System.Drawing.Imaging.ImageFormat.Png);
                 B.Dispose();
 
@@ -2499,7 +2503,7 @@ namespace GerberLibrary
 
                 CurrentLayer = BoardSide.Bottom;
                 B = DrawBoard_V2(dpi, CurrentLayer, ActiveColorSet, outputDir, Logger);
-                filenameT = outputDir + "_Combined_" + CurrentLayer.ToString() + ".png";
+                filenameT = Path.Combine(outputDir, CurrentLayer.ToString() + ".png");
                 B.Save(filenameT, System.Drawing.Imaging.ImageFormat.Png);
                 B.Dispose();
                 callbackProgress?.Invoke(new GerberParseProgressInfo() { ImgType = ImageType.BottomView, LayerIndex = -1, FilePath = filenameT });
